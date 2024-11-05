@@ -1,35 +1,26 @@
 package service
 
 import (
-	"log"
+	"database/sql"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository/sqlite"
 )
 
 type BotService struct {
-	RegisterUserService *RegisterUserService
-	BookingService      *BookingService
+	UserService        *UserService
+	AppointmentService *AppointmentService
 }
 
-func NewBotService() *BotService {
+func NewBotService(db *sql.DB) *BotService {
 
-	//To-DO мб перенести отсюда InitDB
+	appointmentRepo := sqlite.NewSqliteAppointmentRepository(db)
+	appointmentService := NewAppointmentService(appointmentRepo)
 
-	// Сервис не должен знать про БД
-
-	db, err := sqlite.InitDB()
-	if err != nil {
-		log.Fatalf("Ошибка при подключении к базе данных: %v", err)
-	}
-
-	// TO-DO сделать по-другому объявление сервисов и их добавление
-
-	bookingRepo := sqlite.NewSqliteBookingRepository(db)
-
-	bookingService := NewBookingService(bookingRepo)
+	userRepo := sqlite.NewSqliteUserRepository(db)
+	userService := NewUserService(userRepo)
 
 	return &BotService{
-		RegisterUserService: nil,
-		BookingService:      bookingService,
+		UserService:        userService,
+		AppointmentService: appointmentService,
 	}
 }

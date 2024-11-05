@@ -1,4 +1,4 @@
-package handle
+package handler
 
 import (
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"

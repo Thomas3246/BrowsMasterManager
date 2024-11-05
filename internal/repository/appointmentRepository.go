@@ -2,6 +2,6 @@ package repository
 
 import "github.com/Thomas3246/BrowsMasterManager/internal/entites"
 
-type BookingRepository interface {
+type AppointmentRepository interface {
 	CreateAppointment(appointment *entites.Appointment) error
 }

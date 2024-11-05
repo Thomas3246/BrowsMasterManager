@@ -1,4 +1,4 @@
-package handle
+package handler
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -6,7 +6,7 @@ import (
 
 func (h *BotHandler) addAppointment(message *tgbotapi.Message) (resultMessage string) {
 
-	err := h.service.BookingService.CreateAppointment(message.From.ID)
+	err := h.service.AppointmentService.CreateAppointment(message.From.ID)
 
 	resultMessage = "Запись успешно добавлена"
 	if err != nil {
