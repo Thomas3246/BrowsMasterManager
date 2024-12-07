@@ -35,8 +35,8 @@ func (h *BotHandler) HandleMessage(message *tgbotapi.Message) {
 	case "start":
 
 	case "newHandle":
-		msg := h.addAppointment(message)
-		reply := tgbotapi.NewMessage(message.Chat.ID, msg)
+		result := h.addAppointment(message)
+		reply := tgbotapi.NewMessage(message.Chat.ID, result)
 		h.api.Send(reply)
 	}
 

@@ -12,13 +12,6 @@ func main() {
 
 	// To-DO посмотреть про контексты и мб добавить их
 
-	// Добавить переменное окружение
-
-	// apiToken := os.Getenv("TELEGRAM_API_TOKEN")
-	// if apiToken == "" {
-	// 	panic("Необходимо установить TELEGRAM_API_TOKEN")
-	// }
-
 	cfg, err := config.NewConfig("../../config/config.json")
 	if err != nil {
 		log.Fatalf("Ошибка при инициализации конфиг-файла: %v", err)
