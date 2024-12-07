@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository"
 )
@@ -15,12 +17,12 @@ func NewAppointmentService(appointmentRepo repository.AppointmentRepository) *Ap
 	}
 }
 
-func (s *AppointmentService) CreateAppointment(id int64) error {
+func (s *AppointmentService) CreateAppointment(ctx context.Context, id int64) error {
 
 	appointment := entites.Appointment{
 		ID: id,
 	}
 
-	err := s.appointmentRepository.CreateAppointment(&appointment)
+	err := s.appointmentRepository.CreateAppointment(ctx, &appointment)
 	return err
 }

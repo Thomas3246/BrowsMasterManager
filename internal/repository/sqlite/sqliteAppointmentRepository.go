@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
@@ -15,9 +16,18 @@ func NewSqliteAppointmentRepository(db *sql.DB) repository.AppointmentRepository
 	return &SqliteAppointmentRepository{db: db}
 }
 
-func (r *SqliteAppointmentRepository) CreateAppointment(appointment *entites.Appointment) error {
+func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, appointment *entites.Appointment) error {
 
-	// SQL - запрос к БД на INSERT
+	// !--------------------!
+	//   Make insert query
+	// !--------------------!
+
+	query := `INSERT INTO appointments VALUES ()`
+
+	_, err := r.db.ExecContext(ctx, query)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

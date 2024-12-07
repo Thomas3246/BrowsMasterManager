@@ -1,7 +1,11 @@
 package repository
 
-import "github.com/Thomas3246/BrowsMasterManager/internal/entites"
+import (
+	"context"
+
+	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
+)
 
 type AppointmentRepository interface {
-	CreateAppointment(appointment *entites.Appointment) error
+	CreateAppointment(ctx context.Context, appointment *entites.Appointment) error
 }

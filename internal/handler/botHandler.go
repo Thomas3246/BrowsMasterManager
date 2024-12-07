@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"context"
+	"time"
+
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,21 +26,49 @@ func (h *BotHandler) Start() {
 	updates := h.api.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message != nil {
-			h.HandleMessage(update.Message)
-		}
+		go h.HandleMessage(update)
 	}
 }
 
-func (h *BotHandler) HandleMessage(message *tgbotapi.Message) {
-	switch message.Command() {
+func (h *BotHandler) HandleMessage(update tgbotapi.Update) {
+	switch update.Message.Command() {
 
 	case "start":
+		h.HandleStartCommand(update.Message)
 
-	case "newHandle":
-		result := h.addAppointment(message)
-		reply := tgbotapi.NewMessage(message.Chat.ID, result)
-		h.api.Send(reply)
+	case "newAppointment":
+		h.HandleNewAppointmentCommand(update.Message)
 	}
+
+}
+
+func (h *BotHandler) HandleStartCommand(message *tgbotapi.Message) {
+	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
+
+	// select {
+	// case <-ctx.Done():
+	// 	reply := tgbotapi.NewMessage(message.Chat.ID, "Превышено время ожидания")
+	// 	h.api.Send(reply)
+	// 	return
+	// default:
+	reply := tgbotapi.NewMessage(message.Chat.ID, "start")
+	h.api.Send(reply)
+
+}
+
+func (h *BotHandler) HandleNewAppointmentCommand(message *tgbotapi.Message) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// select {
+	// case <-ctx.Done():
+	// 	reply := tgbotapi.NewMessage(message.Chat.ID, "Превышено время ожидания")
+	// 	h.api.Send(reply)
+	// 	return
+	// default:
+	result := h.addAppointment(ctx, message)
+	reply := tgbotapi.NewMessage(message.Chat.ID, result)
+	h.api.Send(reply)
 
 }
