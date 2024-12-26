@@ -8,7 +8,7 @@ import (
 )
 
 func InitDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "../../repo.db")
+	db, err := sql.Open("sqlite", "file:../../repo.db?cache=shared&_timeout=10010")
 	if err != nil {
 		return nil, err
 	}

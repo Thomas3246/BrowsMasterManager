@@ -26,8 +26,20 @@ func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, app
 
 	_, err := r.db.ExecContext(ctx, query)
 	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return err
 	}
+
+	// for i := 0; i < 10; i++ {
+	// 	if ctx.Err() != nil {
+	// 		log.Print(ctx.Err())
+	// 		return ctx.Err()
+	// 	}
+	// 	fmt.Println(i)
+	// 	time.Sleep(time.Second)
+	// }
 
 	return nil
 }
