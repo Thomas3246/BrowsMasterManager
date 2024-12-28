@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"context"
-	"time"
-
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -31,65 +28,37 @@ func (h *BotHandler) Start() {
 }
 
 func (h *BotHandler) HandleMessage(update tgbotapi.Update) {
-	switch update.Message.Command() {
 
-	case "start":
-		h.HandleStartCommand(update.Message)
+	// Обрабатывается отправка пользователем контакта
+	if update.Message != nil {
+		if update.Message.Contact != nil {
+			h.handleContact(update.Message)
+		} else {
+			// Обрабаывается отправка пользователем команд
+			switch update.Message.Command() {
 
-	case "newAppointment":
-		h.HandleNewAppointmentCommand(update.Message)
+			case "start":
+				h.handleStartCommand(update.Message)
+
+			case "newAppointment":
+				h.handleNewAppointmentCommand(update.Message)
+
+			case "name":
+				h.handleNameChangeCommand(update.Message)
+			}
+
+		}
 	}
 
-}
+	if update.CallbackQuery != nil {
+		callbackQuery := update.CallbackQuery
+		switch callbackQuery.Data {
+		case "callbackConfirmName":
+			h.handleConfirmNameCallback(callbackQuery)
 
-func (h *BotHandler) HandleStartCommand(message *tgbotapi.Message) {
+		case "callbackChangeName":
+			h.handleChangeNameCallback(callbackQuery)
+		}
 
-	startMsg := `Привет! Это бот для записи на брови к мастеру ___Евгении___ по адресу **г.Черкесск, ул.**
-
-		Для записи необходимо подтверждение номера. Для подтверждения нажмите на кнопку *"Поделиться"*.`
-
-	reply := tgbotapi.NewMessage(message.Chat.ID, startMsg)
-	reply.ParseMode = "markdown"
-
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButtonContact("Поделиться"),
-		),
-	)
-	reply.ReplyMarkup = keyboard
-	h.api.Send(reply)
-
-	// Создать функцию registerUser в handler, в ней получать обрабатывать полученное сообщение, выделять из него номер телефона,
-	// передавать выделенное в функцию registerUser в service.
-	// В service, вызывается функция repository, где проверяется, зарегестрирован ли пользователь с данным номером.
-	// Если нет, то должно запрашиваться имя, создаваться сущность пользователя и добавляться в базу.
-	// Если да, то у пользователя уточняется его имя (Елена, верно?). Выходят кнопки с вариантами "Да" и "Нет, изменить"
-
-	// После регистрации должно выходить сообщение с инструкциями к пользованию ботом и командами. Должна быть команда /help (она и должна вызываться).
-	// В сообщении команды должы быть inline кнопки для записи или т.д.
-
-	// Добавить контексты
-}
-
-func (h *BotHandler) HandleNewAppointmentCommand(message *tgbotapi.Message) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// resultChan := make(chan string, 1)
-	// go func() {
-	// 	result := h.addAppointment(ctx, message)
-	// 	resultChan <- result
-	// }()
-
-	select {
-	case <-ctx.Done():
-		reply := tgbotapi.NewMessage(message.Chat.ID, "Превышено время ожидания")
-		h.api.Send(reply)
-		return
-	// case result := <-resultChan:
-	default:
-		result := h.addAppointment(ctx, message)
-		reply := tgbotapi.NewMessage(message.Chat.ID, result)
-		h.api.Send(reply)
 	}
 }

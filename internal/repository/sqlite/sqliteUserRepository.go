@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
@@ -17,9 +18,27 @@ func NewSqliteUserRepository(db *sql.DB) repository.UserRepository {
 
 func (r *SqliteUserRepository) RegisterUser(user *entites.User) error {
 
+	// add ctx
+
 	// user CHECK-OUT
 
 	// INSERT UserData query
+
+	return nil
+}
+
+func (r *SqliteUserRepository) ChangeUserName(ctx context.Context, id string, newName string) (err error) {
+	query := `UPDATE Users
+			  SET name = ?
+			  WHERE id = ?`
+
+	_, err = r.db.ExecContext(ctx, query, newName, id)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
 
 	return nil
 }
