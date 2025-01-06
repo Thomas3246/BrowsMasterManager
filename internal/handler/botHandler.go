@@ -27,6 +27,7 @@ func (h *BotHandler) Start() {
 	}
 }
 
+// Мб сделать начало контекстов тут, и при этом передавать канал для чека авторизации
 func (h *BotHandler) HandleMessage(update tgbotapi.Update) {
 
 	// Обрабатывается отправка пользователем контакта

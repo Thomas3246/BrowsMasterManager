@@ -29,7 +29,7 @@ func (s *UserService) RegisterUser(ctx context.Context, id string, phone string)
 
 func (s *UserService) CheckForUser(ctx context.Context, phone string) (name string) {
 	// вызов репо, возврат имени пользователя в случае, если зареган.  "" - Если нет
-	return ""
+	return "name"
 }
 
 func (s *UserService) ChangeUserName(ctx context.Context, id string, newName string) (err error) {

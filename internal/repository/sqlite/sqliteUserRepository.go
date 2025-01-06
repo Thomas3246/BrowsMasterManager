@@ -40,5 +40,14 @@ func (r *SqliteUserRepository) ChangeUserName(ctx context.Context, id string, ne
 		return err
 	}
 
+	// for i := 0; i < 12; i++ {
+	// 	if ctx.Err() != nil {
+	// 		log.Print(ctx.Err())
+	// 		return ctx.Err()
+	// 	}
+	// 	fmt.Println(i)
+	// 	time.Sleep(time.Second)
+	// }
+
 	return nil
 }

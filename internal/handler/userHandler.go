@@ -9,6 +9,11 @@ import (
 )
 
 func (h *BotHandler) registerUser(ctx context.Context, contact *tgbotapi.Contact) (resultMessage string) {
+
+	// В регистрацию поменять имя на логин тг. Чтобы при регистрации не было пустого имени, а пустое имя == пользователь не зареган
+
+	// или сделать сессию регистрации при отправке номера, чтобы сразу указывалось имя
+
 	phone := contact.PhoneNumber
 	id := strconv.FormatInt(contact.UserID, 10)
 
