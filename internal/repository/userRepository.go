@@ -7,6 +7,7 @@ import (
 )
 
 type UserRepository interface {
-	RegisterUser(user *entites.User) error
+	RegisterUser(ctx context.Context, user *entites.User) error
+	CheckForUser(ctx context.Context, userId string) (string, error)
 	ChangeUserName(ctx context.Context, id string, newName string) error
 }

@@ -16,15 +16,25 @@ func NewSqliteUserRepository(db *sql.DB) repository.UserRepository {
 	return &SqliteUserRepository{db: db}
 }
 
-func (r *SqliteUserRepository) RegisterUser(user *entites.User) error {
+func (r *SqliteUserRepository) RegisterUser(ctx context.Context, user *entites.User) error {
 
-	// add ctx
+	query := `INSERT INTO Users (user_id, name, phone_number) VALUES (?, ?, ?)`
 
-	// user CHECK-OUT
-
-	// INSERT UserData query
-
+	_, err := r.db.ExecContext(ctx, query, user.Id, user.Name, user.Phone)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (r *SqliteUserRepository) CheckForUser(ctx context.Context, userId string) (name string, err error) {
+	query := `SELECT name FROM Users 
+			  WHERE user_id = ?`
+	err = r.db.QueryRowContext(ctx, query, userId).Scan(&name)
+	if err != nil {
+		return "", err
+	}
+	return name, nil
 }
 
 func (r *SqliteUserRepository) ChangeUserName(ctx context.Context, id string, newName string) (err error) {

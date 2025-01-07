@@ -10,10 +10,6 @@ import (
 
 func (h *BotHandler) registerUser(ctx context.Context, contact *tgbotapi.Contact) (resultMessage string) {
 
-	// В регистрацию поменять имя на логин тг. Чтобы при регистрации не было пустого имени, а пустое имя == пользователь не зареган
-
-	// или сделать сессию регистрации при отправке номера, чтобы сразу указывалось имя
-
 	phone := contact.PhoneNumber
 	id := strconv.FormatInt(contact.UserID, 10)
 
@@ -26,13 +22,17 @@ func (h *BotHandler) registerUser(ctx context.Context, contact *tgbotapi.Contact
 	return resultMessage
 }
 
-func (h *BotHandler) checkForUser(ctx context.Context, contact *tgbotapi.Contact) (userName string) {
+func (h *BotHandler) checkForUser(ctx context.Context, contact *tgbotapi.Contact) (userName string, isRegistred bool, err error) {
 
-	phone := contact.PhoneNumber
+	userId := strconv.FormatInt(contact.UserID, 10)
 
-	userName = h.service.UserService.CheckForUser(ctx, phone)
+	userName, isRegistred, err = h.service.UserService.CheckForUser(ctx, userId)
+	if err != nil {
+		log.Println(err)
+		return "", isRegistred, err
+	}
 
-	return userName
+	return userName, isRegistred, nil
 }
 
 func (h *BotHandler) changeUserName(ctx context.Context, message *tgbotapi.Message) (resultMessage string) {

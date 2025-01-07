@@ -36,22 +36,37 @@ func (h *BotHandler) handleContact(message *tgbotapi.Message) {
 	go func() {
 		contact := message.Contact
 		if contact.UserID == message.From.ID {
-			userName := h.checkForUser(ctx, contact)
-			if userName != "" {
-				msg := "Вы уже зарегистрированы, вас зовут " + userName + ", верно?"
-
-				reply := tgbotapi.NewMessage(message.Chat.ID, msg)
-				reply.ParseMode = "markdown"
-
-				inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData("Да", "callbackConfirmName"),
-						tgbotapi.NewInlineKeyboardButtonData("Нет, изменить", "callbackChangeName"),
-					),
-				)
-				reply.ReplyMarkup = inlineKeyboard
-
+			userName, isRegistred, err := h.checkForUser(ctx, contact)
+			if err != nil {
+				reply := tgbotapi.NewMessage(message.Chat.ID, "Произошла ошибка, попробуйте позже")
 				resultChan <- reply
+				return
+			}
+
+			if isRegistred {
+				if userName != "" {
+					msg := "Вы уже зарегистрированы, вас зовут " + userName + ", верно?"
+
+					reply := tgbotapi.NewMessage(message.Chat.ID, msg)
+					reply.ParseMode = "markdown"
+
+					inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+						tgbotapi.NewInlineKeyboardRow(
+							tgbotapi.NewInlineKeyboardButtonData("Да", "callbackConfirmName"),
+							tgbotapi.NewInlineKeyboardButtonData("Нет, изменить", "callbackChangeName"),
+						),
+					)
+					reply.ReplyMarkup = inlineKeyboard
+
+					resultChan <- reply
+					return
+				}
+
+				reply := tgbotapi.NewMessage(message.Chat.ID, "Вы зарегистрированы, но у Вас не указано имя. \nУкажите его через \"/name ___имя___\"")
+				reply.ParseMode = "markdown"
+				reply.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+				resultChan <- reply
+
 			} else {
 				resultMessage := h.registerUser(ctx, contact)
 				reply := tgbotapi.NewMessage(message.Chat.ID, resultMessage)
@@ -95,8 +110,6 @@ func (h *BotHandler) handleNewAppointmentCommand(message *tgbotapi.Message) {
 		h.api.Send(reply)
 		return
 	case result := <-resultChan:
-		// default:
-		// result := h.addAppointment(ctx, message)
 		reply := tgbotapi.NewMessage(message.Chat.ID, result)
 		h.api.Send(reply)
 	}
@@ -130,6 +143,5 @@ func (h *BotHandler) handleNameChangeCommand(message *tgbotapi.Message) {
 
 		reply := tgbotapi.NewMessage(message.Chat.ID, result)
 		h.api.Send(reply)
-		// добавить MW
 	}
 }

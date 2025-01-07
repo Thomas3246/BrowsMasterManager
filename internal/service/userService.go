@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository"
@@ -15,21 +16,31 @@ func NewUserService(userRepo repository.UserRepository) *UserService {
 	return &UserService{UserRepository: userRepo}
 }
 
-func (s *UserService) RegisterUser(ctx context.Context, id string, phone string) error {
+func (s *UserService) RegisterUser(ctx context.Context, id string, phoneNumber string) error {
 
 	user := entites.User{
 		Id:    id,
 		Name:  "",
-		Phone: "",
+		Phone: phoneNumber,
 	}
 
-	err := s.UserRepository.RegisterUser(&user)
+	err := s.UserRepository.RegisterUser(ctx, &user)
 	return err
 }
 
-func (s *UserService) CheckForUser(ctx context.Context, phone string) (name string) {
-	// вызов репо, возврат имени пользователя в случае, если зареган.  "" - Если нет
-	return "name"
+// добавить возвращаемое логическое значение и ошибку
+func (s *UserService) CheckForUser(ctx context.Context, userId string) (name string, isRegistred bool, err error) {
+
+	name, err = s.UserRepository.CheckForUser(ctx, userId)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return "", isRegistred, err
+		}
+		return "", isRegistred, nil
+	}
+
+	isRegistred = true
+	return name, isRegistred, nil
 }
 
 func (s *UserService) ChangeUserName(ctx context.Context, id string, newName string) (err error) {
