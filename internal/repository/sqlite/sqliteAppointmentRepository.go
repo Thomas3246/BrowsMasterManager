@@ -22,7 +22,7 @@ func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, app
 	//   Make insert query
 	// !--------------------!
 
-	query := `INSERT INTO appointments VALUES ()`
+	query := `INSERT INTO appointments () VALUES ()`
 
 	_, err := r.db.ExecContext(ctx, query)
 	if err != nil {

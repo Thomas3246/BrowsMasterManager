@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"context"
+	"time"
+
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,42 +26,47 @@ func (h *BotHandler) Start() {
 	updates := h.api.GetUpdatesChan(u)
 
 	for update := range updates {
-		go h.HandleMessage(update)
+		go h.HandleMessage(&update)
 	}
 }
 
-// Мб сделать начало контекстов тут, и при этом передавать канал для чека авторизации
-func (h *BotHandler) HandleMessage(update tgbotapi.Update) {
+func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	// Обрабатывается отправка пользователем контакта
 	if update.Message != nil {
 		if update.Message.Contact != nil {
-			h.handleContact(update.Message)
+			h.handleContact(ctx, update)
 		} else {
 			// Обрабаывается отправка пользователем команд
 			switch update.Message.Command() {
 
 			case "start":
-				h.handleStartCommand(update.Message)
+				h.handleStartCommand(update)
 
-			case "newAppointment":
-				h.handleNewAppointmentCommand(update.Message)
+			case "appointment":
+				h.handleNewAppointmentCommand(ctx, update)
 
 			case "name":
-				h.handleNameChangeCommand(update.Message)
+				handler := h.AuthMiddleWare(h.handleNameChangeCommand)
+				handler(ctx, update)
+				//  h.handleNameChangeCommand(ctx, update)
 			}
 
 		}
 	}
 
+	// Обработка нажатий на кнопки
 	if update.CallbackQuery != nil {
 		callbackQuery := update.CallbackQuery
 		switch callbackQuery.Data {
 		case "callbackConfirmName":
-			h.handleConfirmNameCallback(callbackQuery)
+			h.handleConfirmNameCallback(update)
 
 		case "callbackChangeName":
-			h.handleChangeNameCallback(callbackQuery)
+			h.handleChangeNameCallback(update)
 		}
 
 	}

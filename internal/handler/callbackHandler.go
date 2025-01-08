@@ -2,7 +2,8 @@ package handler
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-func (h *BotHandler) handleConfirmNameCallback(callbackQuery *tgbotapi.CallbackQuery) {
+func (h *BotHandler) handleConfirmNameCallback(update *tgbotapi.Update) {
+	callbackQuery := update.CallbackQuery
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
 	h.api.Request(callback)
 
@@ -11,7 +12,8 @@ func (h *BotHandler) handleConfirmNameCallback(callbackQuery *tgbotapi.CallbackQ
 	h.api.Send(msg)
 }
 
-func (h *BotHandler) handleChangeNameCallback(callbackQuery *tgbotapi.CallbackQuery) {
+func (h *BotHandler) handleChangeNameCallback(update *tgbotapi.Update) {
+	callbackQuery := update.CallbackQuery
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
 	h.api.Request(callback)
 

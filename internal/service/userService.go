@@ -28,14 +28,15 @@ func (s *UserService) RegisterUser(ctx context.Context, id string, phoneNumber s
 	return err
 }
 
-// добавить возвращаемое логическое значение и ошибку
 func (s *UserService) CheckForUser(ctx context.Context, userId string) (name string, isRegistred bool, err error) {
 
 	name, err = s.UserRepository.CheckForUser(ctx, userId)
 	if err != nil {
 		if err != sql.ErrNoRows {
+			// Если ошибка не в том, что пользователь не найден, то возвращается ошибка
 			return "", isRegistred, err
 		}
+		// Если ошибка в том, что пользователь не найден
 		return "", isRegistred, nil
 	}
 

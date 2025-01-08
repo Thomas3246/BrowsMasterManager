@@ -40,13 +40,10 @@ func (r *SqliteUserRepository) CheckForUser(ctx context.Context, userId string) 
 func (r *SqliteUserRepository) ChangeUserName(ctx context.Context, id string, newName string) (err error) {
 	query := `UPDATE Users
 			  SET name = ?
-			  WHERE id = ?`
+			  WHERE user_id = ?`
 
 	_, err = r.db.ExecContext(ctx, query, newName, id)
 	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		return err
 	}
 

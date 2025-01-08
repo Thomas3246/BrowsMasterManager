@@ -22,9 +22,9 @@ func (h *BotHandler) registerUser(ctx context.Context, contact *tgbotapi.Contact
 	return resultMessage
 }
 
-func (h *BotHandler) checkForUser(ctx context.Context, contact *tgbotapi.Contact) (userName string, isRegistred bool, err error) {
+func (h *BotHandler) CheckForUser(ctx context.Context, update *tgbotapi.Update) (userName string, isRegistred bool, err error) {
 
-	userId := strconv.FormatInt(contact.UserID, 10)
+	userId := strconv.FormatInt(update.SentFrom().ID, 10)
 
 	userName, isRegistred, err = h.service.UserService.CheckForUser(ctx, userId)
 	if err != nil {
@@ -36,6 +36,7 @@ func (h *BotHandler) checkForUser(ctx context.Context, contact *tgbotapi.Contact
 }
 
 func (h *BotHandler) changeUserName(ctx context.Context, message *tgbotapi.Message) (resultMessage string) {
+
 	newName := message.CommandArguments()
 	id := strconv.FormatInt(message.From.ID, 10)
 
