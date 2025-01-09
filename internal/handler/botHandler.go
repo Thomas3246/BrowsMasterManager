@@ -26,6 +26,7 @@ func (h *BotHandler) Start() {
 	updates := h.api.GetUpdatesChan(u)
 
 	for update := range updates {
+		// Для каждого сообщения создается своя горутина для параллелизма
 		go h.HandleMessage(&update)
 	}
 }
@@ -44,15 +45,19 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			switch update.Message.Command() {
 
 			case "start":
+				// MiddleWare не требуется, общедоступная команда
 				h.handleStartCommand(update)
 
 			case "appointment":
-				h.handleNewAppointmentCommand(ctx, update)
+				// Для выполнения записи сначала производится проверка, зарегистрирован ли пользователь,
+				// после чего проверяется, ввел ли пользователь свое имя
+				handler := h.NameMiddleWare(h.AuthMiddleWare(h.handleNewAppointmentCommand))
+				handler(ctx, update)
 
 			case "name":
+				// Для изменения имени необходимо подтверждение, что пользователь зарегистрирован
 				handler := h.AuthMiddleWare(h.handleNameChangeCommand)
 				handler(ctx, update)
-				//  h.handleNameChangeCommand(ctx, update)
 			}
 
 		}

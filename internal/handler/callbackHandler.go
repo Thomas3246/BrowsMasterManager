@@ -2,6 +2,7 @@ package handler
 
 import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+// Кнопка подтверждения имени при уточнении
 func (h *BotHandler) handleConfirmNameCallback(update *tgbotapi.Update) {
 	callbackQuery := update.CallbackQuery
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
@@ -12,6 +13,7 @@ func (h *BotHandler) handleConfirmNameCallback(update *tgbotapi.Update) {
 	h.api.Send(msg)
 }
 
+// Кнопка смены имени при уточнении
 func (h *BotHandler) handleChangeNameCallback(update *tgbotapi.Update) {
 	callbackQuery := update.CallbackQuery
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
