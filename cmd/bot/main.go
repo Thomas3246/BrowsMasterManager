@@ -10,8 +10,6 @@ import (
 
 func main() {
 
-	// To-DO посмотреть про контексты и мб добавить их
-
 	cfg, err := config.NewConfig("../../config/config.json")
 	if err != nil {
 		log.Fatalf("Ошибка при инициализации конфиг-файла: %v", err)

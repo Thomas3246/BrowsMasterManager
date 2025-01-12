@@ -3,13 +3,17 @@ package handler
 import (
 	"context"
 	"log"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // MiddleWare для проверки регистрации (регистрация производится при отправке своего контакта боту)
-func (h *BotHandler) AuthMiddleWare(next func(ctx context.Context, update *tgbotapi.Update)) func(ctx context.Context, update *tgbotapi.Update) {
-	return func(ctx context.Context, update *tgbotapi.Update) {
+func (h *BotHandler) AuthMiddleWare(next func(update *tgbotapi.Update)) func(update *tgbotapi.Update) {
+	return func(update *tgbotapi.Update) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		_, isRegistred, err := h.CheckForUser(ctx, update)
 		if err != nil {
 			log.Println(err)
@@ -32,12 +36,15 @@ func (h *BotHandler) AuthMiddleWare(next func(ctx context.Context, update *tgbot
 			return
 		}
 
-		next(ctx, update)
+		next(update)
 	}
 }
 
-func (h *BotHandler) NameMiddleWare(next func(ctx context.Context, update *tgbotapi.Update)) func(ctx context.Context, update *tgbotapi.Update) {
-	return func(ctx context.Context, update *tgbotapi.Update) {
+func (h *BotHandler) NameMiddleWare(next func(update *tgbotapi.Update)) func(update *tgbotapi.Update) {
+	return func(update *tgbotapi.Update) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		userName, _, err := h.CheckForUser(ctx, update)
 		if err != nil {
 			log.Println(err)
@@ -54,6 +61,6 @@ func (h *BotHandler) NameMiddleWare(next func(ctx context.Context, update *tgbot
 			return
 		}
 
-		next(ctx, update)
+		next(update)
 	}
 }

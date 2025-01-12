@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"time"
 
+	rusdate "github.com/Thomas3246/BrowsMasterManager/pkg/rusDate"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -35,7 +37,10 @@ func (h *BotHandler) handleStartCommand(update *tgbotapi.Update) {
 }
 
 // Обработчик отправки пользователем контакта
-func (h *BotHandler) handleContact(ctx context.Context, update *tgbotapi.Update) {
+func (h *BotHandler) handleContact(update *tgbotapi.Update) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	message := update.Message
 	contact := message.Contact
 
@@ -131,28 +136,58 @@ func (h *BotHandler) handleRegister(ctx context.Context, contact *tgbotapi.Conta
 }
 
 // Обработчик команды /appointment
-func (h *BotHandler) handleNewAppointmentCommand(ctx context.Context, update *tgbotapi.Update) {
-	message := update.Message
+// func (h *BotHandler) handleNewAppointmentCommand(update *tgbotapi.Update) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
-	resultChan := make(chan string, 1)
-	go func() {
-		result := h.addAppointment(ctx, message)
-		resultChan <- result
-	}()
+// 	message := update.Message
 
-	select {
-	case <-ctx.Done():
-		reply := tgbotapi.NewMessage(message.Chat.ID, "Не удалось создать запись.\nПревышено время ожидания")
-		h.api.Send(reply)
-		return
-	case result := <-resultChan:
-		reply := tgbotapi.NewMessage(message.Chat.ID, result)
-		h.api.Send(reply)
-	}
+// 	resultChan := make(chan string, 1)
+// 	go func() {
+// 		result := h.addAppointment(ctx, message)
+// 		resultChan <- result
+// 	}()
+
+// 	select {
+// 	case <-ctx.Done():
+// 		reply := tgbotapi.NewMessage(message.Chat.ID, "Не удалось создать запись.\nПревышено время ожидания")
+// 		h.api.Send(reply)
+// 		return
+// 	case result := <-resultChan:
+// 		reply := tgbotapi.NewMessage(message.Chat.ID, result)
+// 		h.api.Send(reply)
+// 	}
+// }
+
+func (h *BotHandler) handleNewAppointmentCommand(update *tgbotapi.Update) {
+
+	msgText := "Давайте выберем дату\n\n"
+
+	date := time.Now()
+	dateKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			// tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(date.Day()) + date., ""),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date), "todayDate + 0"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24)), "todayDate + 1"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*2)), "todayDate + 2"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*3)), "todayDate + 3"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*4)), "todayDate + 4"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*5)), "todayDate + 5"),
+		),
+	)
+
+	msg := tgbotapi.NewMessage(update.FromChat().ID, msgText)
+	msg.ReplyMarkup = dateKeyboard
+	h.api.Send(msg)
 }
 
 // Обработчик команды /name
-func (h *BotHandler) handleNameChangeCommand(ctx context.Context, update *tgbotapi.Update) {
+func (h *BotHandler) handleNameChangeCommand(update *tgbotapi.Update) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	message := update.Message
 
 	// Если была отправлена команда без аргументов
@@ -178,6 +213,9 @@ func (h *BotHandler) handleNameChangeCommand(ctx context.Context, update *tgbota
 	case result := <-resultChan:
 		reply := tgbotapi.NewMessage(message.Chat.ID, result)
 		h.api.Send(reply)
-		return
 	}
+
+	useReply := tgbotapi.NewMessage(message.Chat.ID, "Для записи или просмотра информации о услугах, мастере или боте воспользуйтесь кнопками в клавиатуре")
+	attachFunctionalButtons(&useReply)
+	h.api.Send(useReply)
 }

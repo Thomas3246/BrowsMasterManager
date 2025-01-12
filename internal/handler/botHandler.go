@@ -1,9 +1,11 @@
 package handler
 
 import (
-	"context"
-	"time"
+	"log"
+	"strconv"
+	"strings"
 
+	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -13,6 +15,30 @@ type BotHandler struct {
 	service *service.BotService
 }
 
+type mainButtonStrings struct {
+	newAppointment    string
+	myAppointments    string
+	cancelAppointment string
+	serviceList       string
+	aboutMaster       string
+	help              string
+	confirm           string
+	back              string
+}
+
+var functionalButtons = mainButtonStrings{
+	newAppointment:    "📅 Записаться",
+	myAppointments:    "📝 Мои записи",
+	cancelAppointment: "❌ Отменить запись",
+	serviceList:       "💆‍♀️ Услуги",
+	aboutMaster:       "💁‍♀ О мастере",
+	help:              "❓ Помощь",
+	confirm:           "✅ Подтвердить ✅",
+	back:              "⬅️ Назад",
+}
+
+var usersAppointments = make(map[int64]*entites.Appointment)
+
 func NewBotHandler(api *tgbotapi.BotAPI, service *service.BotService) *BotHandler {
 	return &BotHandler{
 		api:     api,
@@ -21,7 +47,7 @@ func NewBotHandler(api *tgbotapi.BotAPI, service *service.BotService) *BotHandle
 
 func (h *BotHandler) Start() {
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
+	u.Timeout = 30
 
 	updates := h.api.GetUpdatesChan(u)
 
@@ -33,14 +59,12 @@ func (h *BotHandler) Start() {
 
 func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	// Обрабатывается отправка пользователем контакта
 	if update.Message != nil {
 		if update.Message.Contact != nil {
-			h.handleContact(ctx, update)
-		} else {
+			h.handleContact(update)
+		} else if update.Message.IsCommand() {
+
 			// Обрабаывается отправка пользователем команд
 			switch update.Message.Command() {
 
@@ -51,28 +75,80 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			case "appointment":
 				// Для выполнения записи сначала производится проверка, зарегистрирован ли пользователь,
 				// после чего проверяется, ввел ли пользователь свое имя
-				handler := h.NameMiddleWare(h.AuthMiddleWare(h.handleNewAppointmentCommand))
-				handler(ctx, update)
+				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleNewAppointmentCommand))
+				handler(update)
 
 			case "name":
 				// Для изменения имени необходимо подтверждение, что пользователь зарегистрирован
 				handler := h.AuthMiddleWare(h.handleNameChangeCommand)
-				handler(ctx, update)
+				handler(update)
 			}
 
+		} else {
+			switch update.Message.Text {
+			case functionalButtons.newAppointment:
+				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleNewAppointmentCommand))
+				handler(update)
+			}
 		}
 	}
 
 	// Обработка нажатий на кнопки
 	if update.CallbackQuery != nil {
 		callbackQuery := update.CallbackQuery
-		switch callbackQuery.Data {
-		case "callbackConfirmName":
+		switch {
+		case callbackQuery.Data == "callbackConfirmName":
 			h.handleConfirmNameCallback(update)
 
-		case "callbackChangeName":
+		case callbackQuery.Data == "callbackChangeName":
 			h.handleChangeNameCallback(update)
+
+		case strings.HasPrefix(callbackQuery.Data, "todayDate"):
+			parts := strings.Split(callbackQuery.Data, " + ")
+			dayNumber, err := strconv.Atoi(parts[1])
+			if err != nil {
+				log.Println("Ошибка при разборе: ", err)
+				break
+			}
+
+			h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
+
+		case callbackQuery.Data == "confirmDate":
+			h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+
+		case callbackQuery.Data == "backToDate":
+			h.handleBackToDate(callbackQuery)
+
+		case strings.HasPrefix(callbackQuery.Data, "chooseTime"):
+			parts := strings.Split(callbackQuery.Data, ":")
+			hour, err := strconv.Atoi(parts[1])
+			if err != nil {
+				log.Println("Ошибка при разборе: ", err)
+				break
+			}
+			minute, err := strconv.Atoi(parts[2])
+			if err != nil {
+				log.Println("Ошибка при разборе: ", err)
+				break
+			}
+
+			h.handleTimeChooseCallback(callbackQuery, hour, minute, usersAppointments[callbackQuery.From.ID])
 		}
 
 	}
+}
+
+func attachFunctionalButtons(msg *tgbotapi.MessageConfig) {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(functionalButtons.newAppointment)),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton(functionalButtons.myAppointments),
+			tgbotapi.NewKeyboardButton(functionalButtons.cancelAppointment),
+		),
+		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(functionalButtons.aboutMaster)),
+		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(functionalButtons.help)),
+	)
+	msg.ReplyMarkup = keyboard
 }
