@@ -59,6 +59,8 @@ func (h *BotHandler) Start() {
 
 func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
+	// if userState == "changingName {}"
+
 	// Обрабатывается отправка пользователем контакта
 	if update.Message != nil {
 		if update.Message.Contact != nil {
@@ -105,36 +107,73 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 		case callbackQuery.Data == "callbackChangeName":
 			h.handleChangeNameCallback(update)
 
-		case strings.HasPrefix(callbackQuery.Data, "todayDate"):
-			parts := strings.Split(callbackQuery.Data, " + ")
-			dayNumber, err := strconv.Atoi(parts[1])
+		case strings.HasPrefix(callbackQuery.Data, "date_"):
+			dayNumberStr := strings.TrimPrefix(callbackQuery.Data, "date_")
+			dayNumber, err := strconv.Atoi(dayNumberStr)
 			if err != nil {
-				log.Println("Ошибка при разборе: ", err)
-				break
+				log.Println(err)
 			}
 
+			if usersAppointments[callbackQuery.From.ID] == nil {
+				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+			}
 			h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
 
 		case callbackQuery.Data == "confirmDate":
-			h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
 
 		case callbackQuery.Data == "backToDate":
 			h.handleBackToDate(callbackQuery)
 
 		case strings.HasPrefix(callbackQuery.Data, "chooseTime"):
 			parts := strings.Split(callbackQuery.Data, ":")
-			hour, err := strconv.Atoi(parts[1])
-			if err != nil {
-				log.Println("Ошибка при разборе: ", err)
-				break
-			}
-			minute, err := strconv.Atoi(parts[2])
-			if err != nil {
-				log.Println("Ошибка при разборе: ", err)
-				break
+			hour := parts[1]
+			minute := parts[2]
+
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleTimeChooseCallback(callbackQuery, hour, minute, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
 			}
 
-			h.handleTimeChooseCallback(callbackQuery, hour, minute, usersAppointments[callbackQuery.From.ID])
+		case callbackQuery.Data == "inactiveTime":
+			alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "На данное время запись невозможна\n\nПожалуйста, выберите другое время\n\nДоступное время помечено ✅")
+			h.api.Send(alert)
+
+		case callbackQuery.Data == "confirmTime":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleTimeConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case strings.HasPrefix(callbackQuery.Data, "service_"):
+			service_str := strings.TrimPrefix(callbackQuery.Data, "service_")
+			service_id, _ := strconv.Atoi(service_str)
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleServiceChooseCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case strings.HasPrefix(callbackQuery.Data, "addRemove_"):
+			service_str := strings.TrimPrefix(callbackQuery.Data, "addRemove_")
+			service_id, _ := strconv.Atoi(service_str)
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				usersAppointments[callbackQuery.From.ID].Services[service_id].Added = !usersAppointments[callbackQuery.From.ID].Services[service_id].Added
+				h.handleServiceChooseCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
 		}
 
 	}

@@ -8,4 +8,5 @@ import (
 
 type AppointmentRepository interface {
 	CreateAppointment(ctx context.Context, appointment *entites.Appointment) error
+	GetAvailableServices(ctx context.Context) ([]entites.Service, error)
 }

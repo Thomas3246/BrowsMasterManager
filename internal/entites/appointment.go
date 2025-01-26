@@ -5,5 +5,8 @@ import "time"
 type Appointment struct {
 	ID       int64
 	UserId   int64
-	DateTime time.Time
+	Services []Service
+	Date     time.Time
+	Hour     string
+	Minute   string
 }

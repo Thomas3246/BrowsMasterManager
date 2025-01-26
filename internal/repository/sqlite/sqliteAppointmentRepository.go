@@ -43,3 +43,24 @@ func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, app
 
 	return nil
 }
+
+func (r *SqliteAppointmentRepository) GetAvailableServices(ctx context.Context) (services []entites.Service, err error) {
+	query := `SELECT * FROM Services`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		service := entites.Service{}
+		err = rows.Scan(&service.Id, &service.Name, &service.Descr, &service.Cost)
+		if err != nil {
+			return nil, err
+		}
+		services = append(services, service)
+	}
+
+	return services, err
+}
