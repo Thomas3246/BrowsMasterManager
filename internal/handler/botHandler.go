@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/service"
@@ -45,6 +47,28 @@ func NewBotHandler(api *tgbotapi.BotAPI, service *service.BotService) *BotHandle
 		service: service}
 }
 
+func (h *BotHandler) newAppointment(id int64) (*entites.Appointment, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	services, err := h.service.AppointmentService.GetAvailableServices(ctx)
+	if err != nil {
+		log.Println("Ошибка получения услуг: ", err)
+		return nil, err
+	}
+	return &entites.Appointment{Services: services, UserId: id}, nil
+}
+
+// func NewAppointment() (*Appointment, error) {
+// 	services, err := h.service.AppointmentService.GetAvailableServices(ctx)
+// 	if err != nil {
+// 		h.api.Send(tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка, попробуйте позже"))
+// 		log.Println("Ошибка получения услуг: ", err)
+// 		return
+// 	}
+// 	return &Appointment{}
+// }
+
 func (h *BotHandler) Start() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
@@ -75,7 +99,14 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			case "appointment":
 				// Для выполнения записи сначала производится проверка, зарегистрирован ли пользователь,
 				// после чего проверяется, ввел ли пользователь свое имя
-				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				// usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				var err error
+				usersAppointments[update.FromChat().ID], err = h.newAppointment(update.FromChat().ID)
+				if err != nil {
+					errMsg := tgbotapi.NewMessage(update.FromChat().ID, "Произошла ошибка, попробуйте снова позже")
+					h.api.Send(errMsg)
+					return
+				}
 				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleNewAppointmentCommand))
 				handler(update)
 
@@ -97,7 +128,14 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
 			switch update.Message.Text {
 			case functionalButtons.newAppointment:
-				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				// usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+				var err error
+				usersAppointments[update.FromChat().ID], err = h.newAppointment(update.FromChat().ID)
+				if err != nil {
+					errMsg := tgbotapi.NewMessage(update.FromChat().ID, "Произошла ошибка, попробуйте снова позже")
+					h.api.Send(errMsg)
+					return
+				}
 				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleNewAppointmentCommand))
 				handler(update)
 			}
@@ -121,10 +159,13 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 				log.Println(err)
 			}
 
-			if usersAppointments[callbackQuery.From.ID] == nil {
-				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
+
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
 			}
-			h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
 
 		case callbackQuery.Data == "confirmDate":
 			if usersAppointments[callbackQuery.From.ID] != nil {
@@ -193,7 +234,15 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
 		case callbackQuery.Data == "confirmServices":
 			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleServicesConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+				h.handleServicesConfirmCallback(callbackQuery)
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "backToServices":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleBackToServicesCallback(update)
 			} else {
 				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
 				h.api.Send(alert)

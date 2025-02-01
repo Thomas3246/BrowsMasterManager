@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -44,7 +43,6 @@ func (h *BotHandler) handleDateChooseCallback(callbackQuery *tgbotapi.CallbackQu
 
 	editKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			// tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(date.Day()) + date., ""),
 			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date), "date_0"),
 			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24)), "date_1"),
 			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*2)), "date_2"),
@@ -56,6 +54,9 @@ func (h *BotHandler) handleDateChooseCallback(callbackQuery *tgbotapi.CallbackQu
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(functionalButtons.confirm, "confirmDate"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к услугам", "backToServices"),
 		),
 	)
 
@@ -132,6 +133,9 @@ func (h *BotHandler) handleBackToDate(callbackQuery *tgbotapi.CallbackQuery) {
 			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*4)), "date_4"),
 			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*5)), "date_5"),
 		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к услугам", "backToServices"),
+		),
 	)
 
 	msg := tgbotapi.NewEditMessageTextAndMarkup(
@@ -195,68 +199,45 @@ func (h *BotHandler) handleTimeChooseCallback(callbackQuery *tgbotapi.CallbackQu
 	userAppointments.Minute = minute
 }
 
-func (h *BotHandler) handleTimeConfirmCallback(callbackQuery *tgbotapi.CallbackQuery, userAppointments *entites.Appointment) {
+func (h *BotHandler) handleTimeConfirmCallback(callbackQuery *tgbotapi.CallbackQuery, userAppointment *entites.Appointment) {
 
-	deleteMsg := tgbotapi.NewDeleteMessage(callbackQuery.From.ID, callbackQuery.Message.MessageID)
-	h.api.Send(deleteMsg)
+	confirmText := fmt.Sprintf("Запись:\n%s | %s:%s\n\nУслуги:\n", rusdate.FormatDayMonth(userAppointment.Date), userAppointment.Hour, userAppointment.Minute)
 
-	file, err := os.Open("../../assets/Коррекция.jpg")
-	if err != nil {
-		log.Println(err)
-
-		errText := "Произошла ошибка, попробуйте снова позже"
-		errMsg := tgbotapi.NewMessage(callbackQuery.From.ID, errText)
-		h.api.Send(errMsg)
-		return
-	}
-	defer file.Close()
-
-	reader := tgbotapi.FileReader{Name: "Коррекция.jpg", Reader: file}
-
-	photo := tgbotapi.NewPhoto(callbackQuery.From.ID, reader)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	userAppointments.Services, err = h.service.AppointmentService.GetAvailableServices(ctx)
-	if err != nil {
-		h.api.Send(tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка, попробуйте позже"))
-		log.Println("Ошибка получения услуг: ", err)
-		return
-	}
-	editText := fmt.Sprintf("≪━─◈  "+userAppointments.Services[0].Name+"  ◈─━≫\n\n"+userAppointments.Services[0].Descr+"\nЗанимает %d минут\n\n", userAppointments.Services[0].Duration)
-	for i, serv := range userAppointments.Services {
-		if i == 0 {
-			editText = editText + "☑️	__<u>" + serv.Name + "</u>__	☑️\n"
-		} else {
-			editText = editText + "☑️	" + serv.Name + "	☑️\n"
+	totalDuration := 0
+	for i := range userAppointment.Services {
+		if userAppointment.Services[i].Added {
+			confirmText = confirmText + userAppointment.Services[i].Name + "\n"
+			totalDuration += userAppointment.Services[i].Duration
 		}
 	}
 
-	backwardIndex := len(userAppointments.Services) - 1
-	forwardIndex := 1
+	switch {
+	case totalDuration < 60:
+		confirmText = fmt.Sprintf(confirmText+"\nВремя выполнения:\n%d минут", totalDuration)
+	case totalDuration == 60:
+		confirmText = confirmText + "\nВремя выполнения:\n1 час"
+	case totalDuration > 60:
+		hoursDuration := totalDuration / 60
+		minutesDuration := totalDuration % 60
+		confirmText = fmt.Sprintf(confirmText+"\nВремя выполнения:\n%d час, %d минут", hoursDuration, minutesDuration)
+	}
 
-	forwardService := "service_" + strconv.Itoa(forwardIndex)
-	backwardService := "service_" + strconv.Itoa(backwardIndex)
-
-	editKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+	replyKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", backwardService),
-			tgbotapi.NewInlineKeyboardButtonData("Вперед ➡️", forwardService),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("✅ Добавить ✅", "addRemove_0"),
+			tgbotapi.NewInlineKeyboardButtonData("✅ Подтвердить ✅", "confirmAppointment"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к времени", "backToTime"),
 		),
 	)
 
-	photo.ReplyMarkup = editKeyboard
-	photo.Caption = editText
-	photo.ParseMode = "HTML"
-
-	h.api.Send(photo)
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.From.ID,
+		callbackQuery.Message.MessageID,
+		confirmText,
+		replyKeyboard,
+	)
+	h.api.Send(editMsg)
 
 }
 
@@ -326,10 +307,7 @@ func (h *BotHandler) handleServiceChooseCallback(callbackQuery *tgbotapi.Callbac
 				tgbotapi.NewInlineKeyboardButtonData(addRemoveText, addRemoveData),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📅 Записаться 📅", "confirmServices"),
-			),
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к времени", "backToTime"),
+				tgbotapi.NewInlineKeyboardButtonData("📅 Выбрать дату 📅", "confirmServices"),
 			),
 		)
 	} else {
@@ -340,9 +318,6 @@ func (h *BotHandler) handleServiceChooseCallback(callbackQuery *tgbotapi.Callbac
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(addRemoveText, addRemoveData),
-			),
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к времени", "backToTime"),
 			),
 		)
 	}
@@ -434,10 +409,7 @@ func (h *BotHandler) handleAddRemoveServiceCallback(callbackQuery *tgbotapi.Call
 				tgbotapi.NewInlineKeyboardButtonData(addRemoveText, addRemoveData),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("📅 Записаться 📅", "confirmServices"),
-			),
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к времени", "backToTime"),
+				tgbotapi.NewInlineKeyboardButtonData("📅 Выбрать дату 📅", "confirmServices"),
 			),
 		)
 	} else {
@@ -449,9 +421,6 @@ func (h *BotHandler) handleAddRemoveServiceCallback(callbackQuery *tgbotapi.Call
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(addRemoveText, addRemoveData),
 			),
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к времени", "backToTime"),
-			),
 		)
 	}
 
@@ -462,8 +431,6 @@ func (h *BotHandler) handleAddRemoveServiceCallback(callbackQuery *tgbotapi.Call
 }
 
 func (h *BotHandler) handleBackToTimeCallback(callbackQuery *tgbotapi.CallbackQuery, userAppointment *entites.Appointment) {
-	deleteMsg := tgbotapi.NewDeleteMessage(callbackQuery.From.ID, callbackQuery.Message.MessageID)
-	h.api.Send(deleteMsg)
 
 	text := "**" + rusdate.FormatDayMonth(userAppointment.Date) + "**\n\nНа какое время?\n\n"
 
@@ -497,53 +464,54 @@ func (h *BotHandler) handleBackToTimeCallback(callbackQuery *tgbotapi.CallbackQu
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows[0][:], rows[1][:], rows[2][:], rows[3][:],
 		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(functionalButtons.back, "backToDate")))
 
-	msg := tgbotapi.NewMessage(callbackQuery.From.ID, text)
-	msg.ReplyMarkup = keyboard
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.From.ID,
+		callbackQuery.Message.MessageID,
+		text,
+		keyboard,
+	)
 
-	msg.ParseMode = "markdown"
-	h.api.Send(msg)
+	editMsg.ParseMode = "markdown"
+	h.api.Send(editMsg)
 }
 
-func (h *BotHandler) handleServicesConfirmCallback(callbackQuery *tgbotapi.CallbackQuery, userAppointment *entites.Appointment) {
+func (h *BotHandler) handleServicesConfirmCallback(callbackQuery *tgbotapi.CallbackQuery) {
 	deleteMsg := tgbotapi.NewDeleteMessage(callbackQuery.From.ID, callbackQuery.Message.MessageID)
 	h.api.Send(deleteMsg)
 
-	confirmText := fmt.Sprintf("Запись:\n%s | %s:%s\n\nУслуги:\n", rusdate.FormatDayMonth(userAppointment.Date), userAppointment.Hour, userAppointment.Minute)
+	msgText := "Давайте выберем дату\n\n"
 
-	totalDuration := 0
-	for i := range userAppointment.Services {
-		if userAppointment.Services[i].Added {
-			confirmText = confirmText + userAppointment.Services[i].Name + "\n"
-			totalDuration += userAppointment.Services[i].Duration
-		}
-	}
-
-	switch {
-	case totalDuration < 60:
-		confirmText = fmt.Sprintf(confirmText+"\nВремя выполнения:\n%d минут", totalDuration)
-	case totalDuration == 60:
-		confirmText = confirmText + "\nВремя выполнения:\n1 час"
-	case totalDuration > 60:
-		hoursDuration := totalDuration / 60
-		minutesDuration := totalDuration % 60
-		confirmText = fmt.Sprintf(confirmText+"\nВремя выполнения:\n%d час, %d минут", hoursDuration, minutesDuration)
-	}
-
-	confirmMsg := tgbotapi.NewMessage(callbackQuery.From.ID, confirmText)
-
-	replyKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+	date := time.Now()
+	dateKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("✅ Подтвердить ✅", "confirmAppointment"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date), "date_0"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24)), "date_1"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*2)), "date_2"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*3)), "date_3"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*4)), "date_4"),
+			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*5)), "date_5"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад к услугам", "backToServices"),
 		),
 	)
 
-	confirmMsg.ReplyMarkup = replyKeyboard
+	msg := tgbotapi.NewMessage(callbackQuery.From.ID, msgText)
+	msg.ReplyMarkup = dateKeyboard
+	h.api.Send(msg)
+}
 
-	h.api.Send(confirmMsg)
+func (h *BotHandler) handleBackToServicesCallback(update *tgbotapi.Update) {
+	deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.From.ID, update.CallbackQuery.Message.MessageID)
+	h.api.Send(deleteMsg)
+
+	h.handleNewAppointmentCommand(update)
 }
 
 func (h *BotHandler) handleAppointmentConfirmCallback(callbackQuery *tgbotapi.CallbackQuery, userAppointment *entites.Appointment) {
-
+	fmt.Println(userAppointment)
 }
 
 // Добавить фотографии -> Удалять старое сообщение, создавать новое с прикреплением фото.

@@ -2,9 +2,12 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
 	"time"
 
-	rusdate "github.com/Thomas3246/BrowsMasterManager/pkg/rusDate"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -161,26 +164,52 @@ func (h *BotHandler) handleRegister(ctx context.Context, contact *tgbotapi.Conta
 
 func (h *BotHandler) handleNewAppointmentCommand(update *tgbotapi.Update) {
 
-	msgText := "Давайте выберем дату\n\n"
+	file, err := os.Open("../../assets/Коррекция.jpg")
+	if err != nil {
+		log.Println(err)
 
-	date := time.Now()
-	dateKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		errText := "Произошла ошибка, попробуйте снова позже"
+		errMsg := tgbotapi.NewMessage(update.FromChat().ID, errText)
+		h.api.Send(errMsg)
+		return
+	}
+	defer file.Close()
+
+	reader := tgbotapi.FileReader{Name: "Коррекция.jpg", Reader: file}
+
+	photo := tgbotapi.NewPhoto(update.FromChat().ID, reader)
+
+	services := usersAppointments[update.FromChat().ID].Services
+	text := fmt.Sprintf("≪━─◈  "+services[0].Name+"  ◈─━≫\n\n"+services[0].Descr+"\nЗанимает %d минут\n\n", services[0].Duration)
+	for i, serv := range services {
+		if i == 0 {
+			text = text + "☑️	__<u>" + serv.Name + "</u>__	☑️\n"
+		} else {
+			text = text + "☑️	" + serv.Name + "	☑️\n"
+		}
+	}
+
+	backwardIndex := len(services) - 1
+	forwardIndex := 1
+
+	forwardService := "service_" + strconv.Itoa(forwardIndex)
+	backwardService := "service_" + strconv.Itoa(backwardIndex)
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			// tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(date.Day()) + date., ""),
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date), "date_0"),
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24)), "date_1"),
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*2)), "date_2"),
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", backwardService),
+			tgbotapi.NewInlineKeyboardButtonData("Вперед ➡️", forwardService),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*3)), "date_3"),
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*4)), "date_4"),
-			tgbotapi.NewInlineKeyboardButtonData(rusdate.FormatDayMonth(date.Add(time.Hour*24*5)), "date_5"),
+			tgbotapi.NewInlineKeyboardButtonData("✅ Добавить ✅", "addRemove_0"),
 		),
 	)
 
-	msg := tgbotapi.NewMessage(update.FromChat().ID, msgText)
-	msg.ReplyMarkup = dateKeyboard
-	h.api.Send(msg)
+	photo.ReplyMarkup = keyboard
+	photo.Caption = text
+	photo.ParseMode = "HTML"
+
+	h.api.Send(photo)
 }
 
 // Обработчик команды /name

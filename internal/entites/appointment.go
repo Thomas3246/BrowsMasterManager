@@ -1,6 +1,8 @@
 package entites
 
-import "time"
+import (
+	"time"
+)
 
 type Appointment struct {
 	ID            int64
