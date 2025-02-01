@@ -55,7 +55,7 @@ func (r *SqliteAppointmentRepository) GetAvailableServices(ctx context.Context) 
 
 	for rows.Next() {
 		service := entites.Service{}
-		err = rows.Scan(&service.Id, &service.Name, &service.Descr, &service.Cost)
+		err = rows.Scan(&service.Id, &service.Name, &service.Descr, &service.Cost, &service.Duration)
 		if err != nil {
 			return nil, err
 		}

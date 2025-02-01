@@ -59,8 +59,6 @@ func (h *BotHandler) Start() {
 
 func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
-	// if userState == "changingName {}"
-
 	// Обрабатывается отправка пользователем контакта
 	if update.Message != nil {
 		if update.Message.Contact != nil {
@@ -88,6 +86,15 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			}
 
 		} else {
+
+			// Сюда добавить проверку состояния FSM из map
+			// case StateChangeName:
+			// 	newName := update.Message.Text
+			// 	h.saveNewUserName(userID, newName)
+			// 	h.setUserState(userID, StateStart)
+			//
+			// типа такого
+
 			switch update.Message.Text {
 			case functionalButtons.newAppointment:
 				usersAppointments[update.FromChat().ID] = &entites.Appointment{}
@@ -169,14 +176,39 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			service_id, _ := strconv.Atoi(service_str)
 			if usersAppointments[callbackQuery.From.ID] != nil {
 				usersAppointments[callbackQuery.From.ID].Services[service_id].Added = !usersAppointments[callbackQuery.From.ID].Services[service_id].Added
-				h.handleServiceChooseCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
+				// h.handleServiceChooseCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
+				h.handleAddRemoveServiceCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "backToTime":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleBackToTimeCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "confirmServices":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleServicesConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "confirmAppointment":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleAppointmentConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
 			} else {
 				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
 				h.api.Send(alert)
 			}
 		}
-
 	}
+
 }
 
 func attachFunctionalButtons(msg *tgbotapi.MessageConfig) {
