@@ -59,16 +59,6 @@ func (h *BotHandler) newAppointment(id int64) (*entites.Appointment, error) {
 	return &entites.Appointment{Services: services, UserId: id}, nil
 }
 
-// func NewAppointment() (*Appointment, error) {
-// 	services, err := h.service.AppointmentService.GetAvailableServices(ctx)
-// 	if err != nil {
-// 		h.api.Send(tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка, попробуйте позже"))
-// 		log.Println("Ошибка получения услуг: ", err)
-// 		return
-// 	}
-// 	return &Appointment{}
-// }
-
 func (h *BotHandler) Start() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
@@ -99,7 +89,6 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			case "appointment":
 				// Для выполнения записи сначала производится проверка, зарегистрирован ли пользователь,
 				// после чего проверяется, ввел ли пользователь свое имя
-				// usersAppointments[update.FromChat().ID] = &entites.Appointment{}
 				var err error
 				usersAppointments[update.FromChat().ID], err = h.newAppointment(update.FromChat().ID)
 				if err != nil {
@@ -128,7 +117,6 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 
 			switch update.Message.Text {
 			case functionalButtons.newAppointment:
-				// usersAppointments[update.FromChat().ID] = &entites.Appointment{}
 				var err error
 				usersAppointments[update.FromChat().ID], err = h.newAppointment(update.FromChat().ID)
 				if err != nil {
@@ -152,56 +140,6 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 		case callbackQuery.Data == "callbackChangeName":
 			h.handleChangeNameCallback(update)
 
-		case strings.HasPrefix(callbackQuery.Data, "date_"):
-			dayNumberStr := strings.TrimPrefix(callbackQuery.Data, "date_")
-			dayNumber, err := strconv.Atoi(dayNumberStr)
-			if err != nil {
-				log.Println(err)
-			}
-
-			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
-
-			} else {
-				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
-				h.api.Send(alert)
-			}
-
-		case callbackQuery.Data == "confirmDate":
-			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
-			} else {
-				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
-				h.api.Send(alert)
-			}
-
-		case callbackQuery.Data == "backToDate":
-			h.handleBackToDate(callbackQuery)
-
-		case strings.HasPrefix(callbackQuery.Data, "chooseTime"):
-			parts := strings.Split(callbackQuery.Data, ":")
-			hour := parts[1]
-			minute := parts[2]
-
-			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleTimeChooseCallback(callbackQuery, hour, minute, usersAppointments[callbackQuery.From.ID])
-			} else {
-				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
-				h.api.Send(alert)
-			}
-
-		case callbackQuery.Data == "inactiveTime":
-			alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "На данное время запись невозможна\n\nПожалуйста, выберите другое время\n\nДоступное время помечено ✅")
-			h.api.Send(alert)
-
-		case callbackQuery.Data == "confirmTime":
-			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleTimeConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
-			} else {
-				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
-				h.api.Send(alert)
-			}
-
 		case strings.HasPrefix(callbackQuery.Data, "service_"):
 			service_str := strings.TrimPrefix(callbackQuery.Data, "service_")
 			service_id, _ := strconv.Atoi(service_str)
@@ -217,16 +155,7 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			service_id, _ := strconv.Atoi(service_str)
 			if usersAppointments[callbackQuery.From.ID] != nil {
 				usersAppointments[callbackQuery.From.ID].Services[service_id].Added = !usersAppointments[callbackQuery.From.ID].Services[service_id].Added
-				// h.handleServiceChooseCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
 				h.handleAddRemoveServiceCallback(callbackQuery, service_id, usersAppointments[callbackQuery.From.ID])
-			} else {
-				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
-				h.api.Send(alert)
-			}
-
-		case callbackQuery.Data == "backToTime":
-			if usersAppointments[callbackQuery.From.ID] != nil {
-				h.handleBackToTimeCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
 			} else {
 				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
 				h.api.Send(alert)
@@ -240,9 +169,71 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 				h.api.Send(alert)
 			}
 
+		case strings.HasPrefix(callbackQuery.Data, "date_"):
+			dayNumberStr := strings.TrimPrefix(callbackQuery.Data, "date_")
+			dayNumber, err := strconv.Atoi(dayNumberStr)
+			if err != nil {
+				log.Println(err)
+			}
+
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleDateChooseCallback(callbackQuery, dayNumber, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
 		case callbackQuery.Data == "backToServices":
 			if usersAppointments[callbackQuery.From.ID] != nil {
 				h.handleBackToServicesCallback(update)
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "confirmDate":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case strings.HasPrefix(callbackQuery.Data, "chooseTime"):
+			parts := strings.Split(callbackQuery.Data, ":")
+			hour := parts[1]
+			minute := parts[2]
+
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleTimeChooseCallback(callbackQuery, hour, minute, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "inactiveTime":
+			alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "На данное время запись невозможна\n\nПожалуйста, выберите другое время\n\nДоступное время помечено ☑️")
+			h.api.Send(alert)
+
+		case callbackQuery.Data == "backToDate":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleBackToDate(callbackQuery)
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "confirmTime":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleTimeConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
+			} else {
+				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
+				h.api.Send(alert)
+			}
+
+		case callbackQuery.Data == "backToTime":
+			if usersAppointments[callbackQuery.From.ID] != nil {
+				h.handleDateConfirmCallback(callbackQuery, usersAppointments[callbackQuery.From.ID])
 			} else {
 				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
 				h.api.Send(alert)

@@ -5,7 +5,7 @@ import (
 )
 
 type Appointment struct {
-	ID            int64
+	ID            int
 	UserId        int64
 	Services      []Service
 	Date          time.Time
