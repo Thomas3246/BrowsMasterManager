@@ -58,3 +58,26 @@ func (r *SqliteUserRepository) ChangeUserName(ctx context.Context, id string, ne
 
 	return nil
 }
+
+func (r *SqliteUserRepository) CheckForAppointments(ctx context.Context, userId int64) (appointments []entites.Appointment, err error) {
+	query := `SELECT Appointments.appointment_id, Appointments.date, Appointments.hour, Appointments.minute, Appointments.duration, Appointments.cost
+			  FROM Appointments 
+			  WHERE Appointments.user_id = ?`
+
+	rows, err := r.db.QueryContext(ctx, query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		appointment := entites.Appointment{}
+		err = rows.Scan(&appointment.ID, &appointment.DateStr, &appointment.Hour, &appointment.Minute, &appointment.TotalDuration, &appointment.TotalCost)
+		if err != nil {
+			return nil, err
+		}
+		appointments = append(appointments, appointment)
+	}
+
+	return appointments, nil
+}

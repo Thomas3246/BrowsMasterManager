@@ -49,3 +49,12 @@ func (s *UserService) ChangeUserName(ctx context.Context, id string, newName str
 	err = s.UserRepository.ChangeUserName(ctx, id, newName)
 	return err
 }
+
+func (s *UserService) CheckForAppointments(ctx context.Context, userId int64) (appointments []entites.Appointment, err error) {
+	appointments, err = s.UserRepository.CheckForAppointments(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return appointments, nil
+}

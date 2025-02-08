@@ -455,11 +455,15 @@ func (h *BotHandler) handleTimeConfirmCallback(callbackQuery *tgbotapi.CallbackQ
 
 	confirmText := fmt.Sprintf("Запись:\n%s | %s:%s\n\nУслуги:\n", rusdate.FormatDayMonth(userAppointment.Date), userAppointment.Hour, userAppointment.Minute)
 
+	cost := 0
 	for i := range userAppointment.Services {
 		if userAppointment.Services[i].Added {
 			confirmText = confirmText + userAppointment.Services[i].Name + "\n"
+			cost += userAppointment.Services[i].Cost
 		}
 	}
+
+	userAppointment.TotalCost = cost
 
 	switch {
 	case userAppointment.TotalDuration < 60:
@@ -471,6 +475,8 @@ func (h *BotHandler) handleTimeConfirmCallback(callbackQuery *tgbotapi.CallbackQ
 		minutesDuration := userAppointment.TotalDuration % 60
 		confirmText = fmt.Sprintf(confirmText+"\nВремя выполнения:\n%d час, %d минут", hoursDuration, minutesDuration)
 	}
+
+	confirmText = fmt.Sprintf(confirmText+"\nКонечная стоимость:\n%d ₽", cost)
 
 	replyKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(

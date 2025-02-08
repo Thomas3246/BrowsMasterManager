@@ -9,6 +9,7 @@ import (
 type BotService struct {
 	UserService        *UserService
 	AppointmentService *AppointmentService
+	ServiceService     *ServiceService
 }
 
 func NewBotService(db *sql.DB) *BotService {
@@ -19,8 +20,12 @@ func NewBotService(db *sql.DB) *BotService {
 	userRepo := sqlite.NewSqliteUserRepository(db)
 	userService := NewUserService(userRepo)
 
+	serviceRepo := sqlite.NewSqliteServiceRepository(db)
+	serviceService := NewServiceService(serviceRepo)
+
 	return &BotService{
 		UserService:        userService,
 		AppointmentService: appointmentService,
+		ServiceService:     serviceService,
 	}
 }

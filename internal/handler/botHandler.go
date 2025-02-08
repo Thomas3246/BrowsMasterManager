@@ -51,7 +51,7 @@ func (h *BotHandler) newAppointment(id int64) (*entites.Appointment, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	services, err := h.service.AppointmentService.GetAvailableServices(ctx)
+	services, err := h.service.ServiceService.GetAvailableServices(ctx)
 	if err != nil {
 		log.Println("Ошибка получения услуг: ", err)
 		return nil, err
@@ -125,6 +125,10 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 					return
 				}
 				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleNewAppointmentCommand))
+				handler(update)
+
+			case functionalButtons.myAppointments:
+				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleMyAppointments))
 				handler(update)
 			}
 		}

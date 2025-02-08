@@ -21,9 +21,9 @@ func NewSqliteAppointmentRepository(db *sql.DB) repository.AppointmentRepository
 
 func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, appointment *entites.Appointment) error {
 
-	query := `INSERT INTO Appointments (user_id, date, hour, minute, duration) VALUES (?, ?, ?, ?, ?)`
+	query := `INSERT INTO Appointments (user_id, date, hour, minute, duration, cost) VALUES (?, ?, ?, ?, ?, ?)`
 
-	_, err := r.db.ExecContext(ctx, query, appointment.UserId, rusdate.FormatDayMonth(appointment.Date), appointment.Hour, appointment.Minute, appointment.TotalDuration)
+	_, err := r.db.ExecContext(ctx, query, appointment.UserId, rusdate.FormatDayMonth(appointment.Date), appointment.Hour, appointment.Minute, appointment.TotalDuration, appointment.TotalCost)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -60,27 +60,6 @@ func (r *SqliteAppointmentRepository) CreateAppointment(ctx context.Context, app
 	// }
 
 	return nil
-}
-
-func (r *SqliteAppointmentRepository) GetAvailableServices(ctx context.Context) (services []entites.Service, err error) {
-	query := `SELECT * FROM Services`
-
-	rows, err := r.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		service := entites.Service{}
-		err = rows.Scan(&service.Id, &service.Name, &service.Descr, &service.Cost, &service.Duration)
-		if err != nil {
-			return nil, err
-		}
-		services = append(services, service)
-	}
-
-	return services, err
 }
 
 func (r *SqliteAppointmentRepository) CheckAppointmentsAtDate(ctx context.Context, date string) (appointments []entites.Appointment, err error) {

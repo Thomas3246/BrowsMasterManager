@@ -28,15 +28,6 @@ func (s *AppointmentService) CreateAppointment(ctx context.Context, id int64, ap
 	return err
 }
 
-func (s *AppointmentService) GetAvailableServices(ctx context.Context) (services []entites.Service, err error) {
-	services, err = s.appointmentRepository.GetAvailableServices(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return services, err
-}
-
 func (s *AppointmentService) CheckAppointmentsAtDate(ctx context.Context, appointment *entites.Appointment) (appointmentsAtDate []entites.Appointment, err error) {
 	appointmentsAtDate, err = s.appointmentRepository.CheckAppointmentsAtDate(ctx, rusdate.FormatDayMonth(appointment.Date))
 	if err != nil && err != sql.ErrNoRows {
