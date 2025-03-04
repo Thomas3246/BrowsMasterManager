@@ -130,6 +130,10 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			case functionalButtons.myAppointments:
 				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleMyAppointments))
 				handler(update)
+
+			case functionalButtons.cancelAppointment:
+				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleDiscardAppointmentCommand))
+				handler(update)
 			}
 		}
 	}
@@ -250,6 +254,14 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 				alert := tgbotapi.NewCallbackWithAlert(callbackQuery.ID, "Пожалуйста, начните новую запись")
 				h.api.Send(alert)
 			}
+
+		case strings.HasPrefix(callbackQuery.Data, "confirmCancelAppointment_"):
+			parts := strings.Split(callbackQuery.Data, "_")
+			h.handleAppointmentCancelCallback(callbackQuery, parts[1])
+
+		case strings.HasPrefix(callbackQuery.Data, "changeCancelAppointment_"):
+			parts := strings.Split(callbackQuery.Data, "_")
+			h.handleChangeAppointmentCancelCallback(callbackQuery, parts[1])
 		}
 	}
 

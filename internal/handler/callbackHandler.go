@@ -16,8 +16,6 @@ import (
 // Кнопка подтверждения имени при уточнении
 func (h *BotHandler) handleConfirmNameCallback(update *tgbotapi.Update) {
 	callbackQuery := update.CallbackQuery
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
-	h.api.Request(callback)
 
 	msg := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, "Отлично, так и оставим")
 	attachFunctionalButtons(&msg)
@@ -27,8 +25,6 @@ func (h *BotHandler) handleConfirmNameCallback(update *tgbotapi.Update) {
 // Кнопка смены имени при уточнении
 func (h *BotHandler) handleChangeNameCallback(update *tgbotapi.Update) {
 	callbackQuery := update.CallbackQuery
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
-	h.api.Request(callback)
 
 	msg := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, "Для смены имени напишите команду \"/name ___имя___\". \nНапример: \"/name Лена\"")
 	msg.ParseMode = "markdown"
@@ -509,6 +505,89 @@ func (h *BotHandler) handleAppointmentConfirmCallback(callbackQuery *tgbotapi.Ca
 		editText,
 	)
 
+	h.api.Send(editMsg)
+
+}
+
+func (h *BotHandler) handleChangeAppointmentCancelCallback(callbackQuery *tgbotapi.CallbackQuery, appointmentId string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userAppointments, err := h.service.AppointmentService.GetAppointmentsFromCash(ctx, int(callbackQuery.From.ID))
+	if err != nil {
+		errMsg := tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка. Пожалуйста, попробуйте позже")
+		h.api.Send(errMsg)
+		return
+	}
+
+	appId, err := strconv.Atoi(appointmentId)
+	if err != nil {
+		log.Printf("Ошибка перевода id записи в int: %v", err)
+		errMsg := tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка. Пожалуйста, попробуйте позже")
+		h.api.Send(errMsg)
+		return
+	}
+
+	var currentAppointment int
+
+	for i, appointment := range userAppointments {
+		if appointment.ID == appId {
+			currentAppointment = i
+		}
+	}
+
+	appointment := userAppointments[currentAppointment]
+
+	editText := fmt.Sprintf("Запись на\n%s\n%s:%s\n\nУслуги:\n", appointment.DateStr, appointment.Hour, appointment.Minute)
+	for _, service := range appointment.Services {
+		editText = editText + service.Name + "\n"
+	}
+	editText = fmt.Sprintf(editText+"\nДлительность: %d минут\nСтоимость: %d ₽", appointment.TotalDuration, appointment.TotalCost)
+
+	var arrowsRow []tgbotapi.InlineKeyboardButton
+
+	if currentAppointment == 0 {
+		changeCancelAppointmentText := fmt.Sprintf("changeCancelAppointment_%d", userAppointments[1].ID)
+		arrowsRow = append(arrowsRow, tgbotapi.NewInlineKeyboardButtonData(" ➡️ ", changeCancelAppointmentText))
+	} else if currentAppointment == len(userAppointments)-1 {
+		changeCancelAppointmentText := fmt.Sprintf("changeCancelAppointment_%d", userAppointments[currentAppointment-1].ID)
+		arrowsRow = append(arrowsRow, tgbotapi.NewInlineKeyboardButtonData(" ⬅️ ", changeCancelAppointmentText))
+	} else {
+		leftChangeCancelAppointmentText := fmt.Sprintf("changeCancelAppointment_%d", userAppointments[currentAppointment-1].ID)
+		rightChangeCancelAppointmentText := fmt.Sprintf("changeCancelAppointment_%d", userAppointments[currentAppointment+1].ID)
+		arrowsRow = append(arrowsRow, tgbotapi.NewInlineKeyboardButtonData(" ⬅️ ", leftChangeCancelAppointmentText))
+		arrowsRow = append(arrowsRow, tgbotapi.NewInlineKeyboardButtonData(" ➡️ ", rightChangeCancelAppointmentText))
+	}
+
+	cancelCallbackText := fmt.Sprintf("confirmCancelAppointment_%d", appointment.ID)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		arrowsRow,
+		tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("❌ Отменить ❌", cancelCallbackText)),
+	)
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.From.ID,
+		callbackQuery.Message.MessageID,
+		editText,
+		keyboard,
+	)
+
+	h.api.Send(editMsg)
+}
+
+func (h *BotHandler) handleAppointmentCancelCallback(callbackQuery *tgbotapi.CallbackQuery, appointmentId string) {
+	err := h.service.AppointmentService.CancelAppointment(appointmentId, callbackQuery.From.ID)
+	if err != nil {
+		errMsg := tgbotapi.NewMessage(callbackQuery.From.ID, "Произошла ошибка, попробуйте позже")
+		h.api.Send(errMsg)
+		return
+	}
+
+	editMsg := tgbotapi.NewEditMessageText(
+		callbackQuery.From.ID,
+		callbackQuery.Message.MessageID,
+		"Запись была успешно удалена",
+	)
 	h.api.Send(editMsg)
 
 }

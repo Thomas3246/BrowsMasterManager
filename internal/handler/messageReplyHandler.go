@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -59,7 +60,7 @@ func (h *BotHandler) handleContact(update *tgbotapi.Update) {
 	// Канал для получения результата горутины
 	resultChan := make(chan struct {
 		userName    string
-		isResistred bool
+		isRegistred bool
 		err         error
 	})
 
@@ -67,7 +68,7 @@ func (h *BotHandler) handleContact(update *tgbotapi.Update) {
 		userName, isRegistred, err := h.CheckForUser(ctx, update)
 		resultChan <- struct {
 			userName    string
-			isResistred bool
+			isRegistred bool
 			err         error
 		}{userName, isRegistred, err}
 	}()
@@ -84,7 +85,7 @@ func (h *BotHandler) handleContact(update *tgbotapi.Update) {
 			return
 		}
 
-		if result.isResistred {
+		if result.isRegistred {
 			if result.userName != "" {
 				msg := "Вы уже зарегистрированы, вас зовут " + result.userName + ", верно?"
 
@@ -137,30 +138,6 @@ func (h *BotHandler) handleRegister(ctx context.Context, contact *tgbotapi.Conta
 		return
 	}
 }
-
-// Обработчик команды /appointment
-// func (h *BotHandler) handleNewAppointmentCommand(update *tgbotapi.Update) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-// 	defer cancel()
-
-// 	message := update.Message
-
-// 	resultChan := make(chan string, 1)
-// 	go func() {
-// 		result := h.addAppointment(ctx, message)
-// 		resultChan <- result
-// 	}()
-
-// 	select {
-// 	case <-ctx.Done():
-// 		reply := tgbotapi.NewMessage(message.Chat.ID, "Не удалось создать запись.\nПревышено время ожидания")
-// 		h.api.Send(reply)
-// 		return
-// 	case result := <-resultChan:
-// 		reply := tgbotapi.NewMessage(message.Chat.ID, result)
-// 		h.api.Send(reply)
-// 	}
-// }
 
 func (h *BotHandler) handleNewAppointmentCommand(update *tgbotapi.Update) {
 
@@ -247,4 +224,69 @@ func (h *BotHandler) handleNameChangeCommand(update *tgbotapi.Update) {
 	useReply := tgbotapi.NewMessage(message.Chat.ID, "Для записи или просмотра информации о услугах, мастере или боте воспользуйтесь кнопками в клавиатуре")
 	attachFunctionalButtons(&useReply)
 	h.api.Send(useReply)
+}
+
+func (h *BotHandler) handleDiscardAppointmentCommand(update *tgbotapi.Update) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	appointments, err := h.service.UserService.CheckForAppointments(ctx, update.Message.From.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			noRowsMsg := tgbotapi.NewMessage(update.Message.From.ID, "У вас нет активных записей")
+			h.api.Send(noRowsMsg)
+			return
+		}
+		log.Println("Ошибка получения записей: ", err)
+		errMsg := tgbotapi.NewMessage(update.Message.From.ID, "Произошла ошибка, повторите позже")
+		h.api.Send(errMsg)
+		return
+	}
+
+	if len(appointments) == 0 {
+		noAppointmentsMsg := tgbotapi.NewMessage(update.Message.From.ID, "У вас нет активных записей")
+		h.api.Send(noAppointmentsMsg)
+		return
+	}
+
+	for i := range appointments {
+		appointments[i].Services, err = h.service.ServiceService.GetServicesInAppointment(ctx, appointments[i].ID)
+		if err != nil {
+			log.Printf("Ошибка определения услуг на запись: %v", err)
+			errMsg := tgbotapi.NewMessage(update.Message.From.ID, "Произошла ошибка, повторите позже")
+			h.api.Send(errMsg)
+			return
+		}
+	}
+
+	err = h.service.AppointmentService.SetAppointmentsInCash(ctx, update.Message.From.ID, appointments)
+	if err != nil {
+		errMsg := tgbotapi.NewMessage(update.Message.From.ID, "Произошла ошибка, повторите позже")
+		h.api.Send(errMsg)
+		return
+	}
+
+	msgText := fmt.Sprintf("Запись на\n%s\n%s:%s\n\nУслуги:\n", appointments[0].DateStr, appointments[0].Hour, appointments[0].Minute)
+	for _, service := range appointments[0].Services {
+		msgText = msgText + service.Name + "\n"
+	}
+	msgText = fmt.Sprintf(msgText+"\nДлительность: %d минут\nСтоимость: %d ₽", appointments[0].TotalDuration, appointments[0].TotalCost)
+
+	msg := tgbotapi.NewMessage(update.Message.From.ID, msgText)
+
+	// keyboard
+
+	cancelCallbackText := fmt.Sprintf("confirmCancelAppointment_%d", appointments[0].ID)
+	if len(appointments) == 1 {
+		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("❌ Отменить ❌", cancelCallbackText)))
+	} else {
+		changeCancelAppointmentText := fmt.Sprintf("changeCancelAppointment_%d", appointments[1].ID)
+		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(" ➡️ ", changeCancelAppointmentText)),
+			tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("❌ Отменить ❌", cancelCallbackText)),
+		)
+	}
+
+	h.api.Send(msg)
+
 }

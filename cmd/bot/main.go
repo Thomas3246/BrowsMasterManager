@@ -17,17 +17,24 @@ func main() {
 	if cfg.BotToken == "" {
 		log.Fatalf("API-токен не введён")
 	}
-	apiToken := cfg.BotToken
+	if cfg.MasterPhone == "" {
+		log.Fatalf("Номер мастера не введен")
+	}
 
 	db, err := sqlite.InitDB()
 	if err != nil {
 		log.Fatalf("Ошибка при подключении к базе данных: %v", err)
 	}
 
-	bot, err := bot.NewBot(apiToken, db)
+	// Добавить в NewBot и NewService с параметром db параметр redis
+
+	bot, err := bot.NewBot(cfg, db)
 	if err != nil {
 		log.Fatalf("Ошибка инициализации приложения: %v", err)
 	}
 
-	bot.Start()
+	err = bot.Start()
+	if err != nil {
+		log.Fatalf("Ошибка запуска бота: %v", err)
+	}
 }

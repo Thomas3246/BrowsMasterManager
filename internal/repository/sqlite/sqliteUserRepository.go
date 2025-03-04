@@ -18,9 +18,9 @@ func NewSqliteUserRepository(db *sql.DB) repository.UserRepository {
 
 func (r *SqliteUserRepository) RegisterUser(ctx context.Context, user *entites.User) error {
 
-	query := `INSERT INTO Users (user_id, name, phone_number) VALUES (?, ?, ?)`
+	query := `INSERT INTO Users (user_id, name, phone_number, role) VALUES (?, ?, ?, (SELECT role_id FROM Roles WHERE role_name = ?))`
 
-	_, err := r.db.ExecContext(ctx, query, user.Id, user.Name, user.Phone)
+	_, err := r.db.ExecContext(ctx, query, user.Id, user.Name, user.Phone, user.Role)
 	if err != nil {
 		return err
 	}

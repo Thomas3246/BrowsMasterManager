@@ -9,4 +9,5 @@ import (
 type AppointmentRepository interface {
 	CreateAppointment(ctx context.Context, appointment *entites.Appointment) error
 	CheckAppointmentsAtDate(ctx context.Context, date string) (appointments []entites.Appointment, err error)
+	CancelAppointment(ctx context.Context, id int) (err error)
 }

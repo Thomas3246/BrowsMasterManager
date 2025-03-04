@@ -16,6 +16,7 @@ func (h *BotHandler) registerUser(ctx context.Context, contact *tgbotapi.Contact
 	phone := contact.PhoneNumber
 	id := strconv.FormatInt(contact.UserID, 10)
 
+	// указать номер мастера или достать его из новой функции
 	err := h.service.UserService.RegisterUser(ctx, id, phone)
 	resultMessage = "Вы были успешно зарегистрированы. Пожалуйста, укажите ваше имя командой \n\"/name ___имя___\". \nНапример: \"/name Лена\""
 	if err != nil {

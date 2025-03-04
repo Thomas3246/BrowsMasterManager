@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	BotToken string `json:"botToken"`
+	BotToken    string `json:"botToken"`
+	MasterPhone string `json:"masterPhone"`
 }
 
 func NewConfig(path string) (*Config, error) {

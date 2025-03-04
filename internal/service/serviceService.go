@@ -5,15 +5,18 @@ import (
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository"
+	"github.com/redis/go-redis/v9"
 )
 
 type ServiceService struct {
 	serviceRepository repository.ServiceRepository
+	redisClient       *redis.Client
 }
 
-func NewServiceService(serviceRepo repository.ServiceRepository) *ServiceService {
+func NewServiceService(serviceRepo repository.ServiceRepository, redisClient *redis.Client) *ServiceService {
 	return &ServiceService{
 		serviceRepository: serviceRepo,
+		redisClient:       redisClient,
 	}
 }
 

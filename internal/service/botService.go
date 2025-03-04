@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository/sqlite"
+	"github.com/redis/go-redis/v9"
 )
 
 type BotService struct {
@@ -12,16 +13,16 @@ type BotService struct {
 	ServiceService     *ServiceService
 }
 
-func NewBotService(db *sql.DB) *BotService {
+func NewBotService(db *sql.DB, redis *redis.Client) *BotService {
 
 	appointmentRepo := sqlite.NewSqliteAppointmentRepository(db)
-	appointmentService := NewAppointmentService(appointmentRepo)
+	appointmentService := NewAppointmentService(appointmentRepo, redis)
 
 	userRepo := sqlite.NewSqliteUserRepository(db)
-	userService := NewUserService(userRepo)
+	userService := NewUserService(userRepo, redis)
 
 	serviceRepo := sqlite.NewSqliteServiceRepository(db)
-	serviceService := NewServiceService(serviceRepo)
+	serviceService := NewServiceService(serviceRepo, redis)
 
 	return &BotService{
 		UserService:        userService,

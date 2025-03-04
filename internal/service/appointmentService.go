@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"strconv"
 	"time"
@@ -10,15 +11,18 @@ import (
 	"github.com/Thomas3246/BrowsMasterManager/internal/entites"
 	"github.com/Thomas3246/BrowsMasterManager/internal/repository"
 	rusdate "github.com/Thomas3246/BrowsMasterManager/pkg/rusDate"
+	"github.com/redis/go-redis/v9"
 )
 
 type AppointmentService struct {
 	appointmentRepository repository.AppointmentRepository
+	redisClient           *redis.Client
 }
 
-func NewAppointmentService(appointmentRepo repository.AppointmentRepository) *AppointmentService {
+func NewAppointmentService(appointmentRepo repository.AppointmentRepository, redisClient *redis.Client) *AppointmentService {
 	return &AppointmentService{
 		appointmentRepository: appointmentRepo,
+		redisClient:           redisClient,
 	}
 }
 
@@ -57,4 +61,80 @@ func (s *AppointmentService) CheckIsBusy(appointmentsAtDate []entites.Appointmen
 		}
 	}
 	return false
+}
+
+func (s *AppointmentService) SetAppointmentsInCash(ctx context.Context, id int64, appointments []entites.Appointment) error {
+	userId := strconv.Itoa(int(id))
+
+	data, err := json.Marshal(appointments)
+	if err != nil {
+		log.Printf("Произошла ошибка сериализации: %v", err)
+		return err
+	}
+
+	err = s.redisClient.Set(ctx, userId, data, 0).Err()
+	if err != nil {
+		log.Printf("Ошибка записи в redis: %v", err)
+		return err
+	}
+	return nil
+}
+
+func (s *AppointmentService) GetAppointmentsFromCash(ctx context.Context, userId int) (appointments []entites.Appointment, err error) {
+	id := strconv.Itoa(userId)
+	data, err := s.redisClient.Get(ctx, id).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		log.Printf("Ошибка получения записей из redis: %v", err)
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(data), &appointments)
+	if err != nil {
+		log.Printf("Ошибка десериализации записей из JSON: %v", err)
+		return nil, err
+	}
+
+	return appointments, nil
+}
+
+func (s *AppointmentService) CancelAppointment(appointmentId string, userId int64) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	id, err := strconv.Atoi(appointmentId)
+	if err != nil {
+		log.Printf("Произошла ошибка преобразования id записи в int: %v", err)
+		return err
+	}
+
+	err = s.appointmentRepository.CancelAppointment(ctx, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+
+		log.Printf("Произошла ошибка при отмене записи: %v", err)
+		return err
+	}
+
+	userAppointments, err := s.GetAppointmentsFromCash(ctx, int(userId))
+	if err != nil {
+		return err
+	}
+	var newUserAppointments []entites.Appointment
+	for _, appointment := range userAppointments {
+		if appointment.ID != id {
+			newUserAppointments = append(newUserAppointments, appointment)
+		}
+	}
+
+	err = s.SetAppointmentsInCash(ctx, userId, newUserAppointments)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

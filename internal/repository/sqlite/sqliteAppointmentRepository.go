@@ -82,3 +82,13 @@ func (r *SqliteAppointmentRepository) CheckAppointmentsAtDate(ctx context.Contex
 
 	return appointments, nil
 }
+
+func (r *SqliteAppointmentRepository) CancelAppointment(ctx context.Context, id int) (err error) {
+	query := "DELETE FROM Appointments WHERE appointment_id = ?"
+
+	_, err = r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
