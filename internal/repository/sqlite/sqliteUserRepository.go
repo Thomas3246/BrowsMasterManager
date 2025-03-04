@@ -81,3 +81,15 @@ func (r *SqliteUserRepository) CheckForAppointments(ctx context.Context, userId 
 
 	return appointments, nil
 }
+
+func (r *SqliteUserRepository) CheckForUserByPhone(ctx context.Context, phone string) (id int, err error) {
+	query := "SELECT user_id FROM Users WHERE phone_number = ?"
+	row := r.db.QueryRowContext(ctx, query, phone)
+
+	err = row.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}

@@ -43,6 +43,11 @@ func (b *Bot) Start() (err error) {
 		return err
 	}
 
+	err = botService.UserService.SetAboutMaster(b.cfg.AboutMaster)
+	if err != nil {
+		return err
+	}
+
 	botHandler := handler.NewBotHandler(b.api, botService)
 
 	botHandler.Start()

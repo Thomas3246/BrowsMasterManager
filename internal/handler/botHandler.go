@@ -103,6 +103,9 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 				// Для изменения имени необходимо подтверждение, что пользователь зарегистрирован
 				handler := h.AuthMiddleWare(h.handleNameChangeCommand)
 				handler(update)
+
+			case "help":
+				h.handleHelpCommand(update)
 			}
 
 		} else {
@@ -134,6 +137,12 @@ func (h *BotHandler) HandleMessage(update *tgbotapi.Update) {
 			case functionalButtons.cancelAppointment:
 				handler := h.AuthMiddleWare(h.NameMiddleWare(h.handleDiscardAppointmentCommand))
 				handler(update)
+
+			case functionalButtons.aboutMaster:
+				h.handleAboutMasterCommand(update)
+
+			case functionalButtons.help:
+				h.handleHelpCommand(update)
 			}
 		}
 	}

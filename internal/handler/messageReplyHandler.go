@@ -274,8 +274,6 @@ func (h *BotHandler) handleDiscardAppointmentCommand(update *tgbotapi.Update) {
 
 	msg := tgbotapi.NewMessage(update.Message.From.ID, msgText)
 
-	// keyboard
-
 	cancelCallbackText := fmt.Sprintf("confirmCancelAppointment_%d", appointments[0].ID)
 	if len(appointments) == 1 {
 		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData("❌ Отменить ❌", cancelCallbackText)))
@@ -289,4 +287,23 @@ func (h *BotHandler) handleDiscardAppointmentCommand(update *tgbotapi.Update) {
 
 	h.api.Send(msg)
 
+}
+
+func (h *BotHandler) handleAboutMasterCommand(update *tgbotapi.Update) {
+	aboutMaster, err := h.service.UserService.GetAboutMaster()
+	if err != nil {
+		errMsg := tgbotapi.NewMessage(update.Message.From.ID, "Произошла ошибка. Пожалуйста, попробуйте позже")
+		h.api.Send(errMsg)
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.From.ID, aboutMaster)
+	h.api.Send(msg)
+}
+
+func (h *BotHandler) handleHelpCommand(update *tgbotapi.Update) {
+	msgText := "Команда /help - помощь\nКоманда /start - запуск бота. В случае, если нет функциональных кнопок, необходимо перезапустить бота.\n"
+	msgText = msgText + "Для того, чтобы подтвердить свой номер телефона, необходимо отправить команду /start, после чего поделиться своим номером телефона"
+	msgText = msgText + "Для смены или указания имени необходимо выполнить команду вида \"/name имя\""
+	msg := tgbotapi.NewMessage(update.Message.From.ID, msgText)
+	h.api.Send(msg)
 }

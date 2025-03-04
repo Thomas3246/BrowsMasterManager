@@ -497,7 +497,22 @@ func (h *BotHandler) handleAppointmentConfirmCallback(callbackQuery *tgbotapi.Ca
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	editText := h.addAppointment(ctx, callbackQuery.From.ID, userAppointment)
+	err := h.service.AppointmentService.CreateAppointment(ctx, callbackQuery.From.ID, userAppointment)
+
+	editText := "Запись успешно добавлена\n\nВы можете просмотреть свои активные записи, нажав на кнопку \"Мои записи\"\n\nИли отменить свою запись, нажав на кнопку \"Отменить запись\""
+	if err != nil {
+		editText = "Не удалось создать запись\n\nПожалуйста, попробуйте позже"
+		log.Print(err)
+	} else {
+		masterId, _ := h.service.UserService.GetMasterId()
+		masterMessageText := fmt.Sprintf("Была добавлена запись на\n%s\n%s:%s\n\nУслуги:\n", rusdate.FormatDayMonth(userAppointment.Date), userAppointment.Hour, userAppointment.Minute)
+		for _, service := range userAppointment.Services {
+			masterMessageText = fmt.Sprintf(masterMessageText + service.Name + "\n")
+		}
+		masterMessageText = fmt.Sprintf(masterMessageText+"\nДлительность: %d\nСтоимость: %d", userAppointment.TotalDuration, userAppointment.TotalCost)
+		messageToMaster := tgbotapi.NewMessage(masterId, masterMessageText)
+		h.api.Send(messageToMaster)
+	}
 
 	editMsg := tgbotapi.NewEditMessageText(
 		callbackQuery.From.ID,

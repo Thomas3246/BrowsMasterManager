@@ -120,3 +120,47 @@ func (s *UserService) GetMasterPhone() (phone string, err error) {
 
 	return phone, nil
 }
+
+func (s *UserService) GetMasterId() (id int64, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	phone, err := s.GetMasterPhone()
+	if err != nil {
+		return 0, err
+	}
+
+	userId, err := s.UserRepository.CheckForUserByPhone(ctx, phone)
+	if err != nil {
+		log.Printf("Ошибка проверки пользователя по телефону: %v", err)
+		return 0, err
+	}
+
+	return int64(userId), nil
+}
+
+func (s *UserService) SetAboutMaster(note string) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = s.RedisClient.Set(ctx, "aboutMaster", note, 0).Err()
+	if err != nil {
+		log.Printf("Ошибка занесения информации о мастере в redis: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserService) GetAboutMaster() (note string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	note, err = s.RedisClient.Get(ctx, "aboutMaster").Result()
+	if err != nil {
+		log.Printf("Ошибка чтения инфо о мастере из redis: %v", err)
+		return "", err
+	}
+
+	return note, nil
+}

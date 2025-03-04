@@ -20,6 +20,9 @@ func main() {
 	if cfg.MasterPhone == "" {
 		log.Fatalf("Номер мастера не введен")
 	}
+	if cfg.AboutMaster == "" {
+		log.Fatalf("Информация о мастере не введена")
+	}
 
 	db, err := sqlite.InitDB()
 	if err != nil {
