@@ -1,5 +1,5 @@
 {
-    "botToken": "",
-    "masterPhone": "",
-    "aboutMaster": ""
+    "botToken": "botToken",
+    "masterPhone": "70000000000",
+    "aboutMaster": "Мастер Имя предотавляет услуги по бровям.\nАдрес: г.Город, ул.Улица.\nСалон: имяСалона"
 }
