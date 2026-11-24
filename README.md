@@ -118,3 +118,60 @@ BrowsMasterManager/
 - SQLite с предварительно созданной структурой базы данных.
 - Созданный Telegram-бот и его API-токен.
 
+## Демонстрация работы
+
+### 1. Запуск и регистрация пользователя
+
+<p align="center">
+  <img src="docs/screenshots/1.jpg" width="280" alt="Запуск бота">
+  <img src="docs/screenshots/2.jpg" width="280" alt="Отправка контакта">
+</p>
+<p align="center">
+  <sub>Запуск бота и подтверждение номера телефона</sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/3.jpg" width="280" alt="Добавление имени">
+</p>
+<p align="center">
+  <sub>Указание имени пользователя</sub>
+</p>
+
+### 2. Выбор услуг
+
+<p align="center">
+  <img src="docs/screenshots/4.jpg" width="280" alt="Просмотр услуг">
+  <img src="docs/screenshots/5.jpg" width="280" alt="Выбор услуг">
+</p>
+<p align="center">
+  <sub>Просмотр каталога и выбор необходимых процедур</sub>
+</p>
+
+### 3. Выбор даты и времени
+
+<p align="center">
+  <img src="docs/screenshots/6.jpg" width="280" alt="Выбор даты">
+  <img src="docs/screenshots/7.jpg" width="280" alt="Выбор времени">
+</p>
+<p align="center">
+  <sub>Выбор даты посещения и доступного временного интервала</sub>
+</p>
+
+### 4. Подтверждение записи
+
+<p align="center">
+  <img src="docs/screenshots/8.jpg" width="280" alt="Подтверждение записи">
+</p>
+<p align="center">
+  <sub>Проверка выбранных услуг, продолжительности и итоговой стоимости</sub>
+</p>
+
+### 5. Управление записями и уведомления
+
+<p align="center">
+  <img src="docs/screenshots/9.jpg" width="280" alt="Отмена записи">
+  <img src="docs/screenshots/10.jpg" width="280" alt="Уведомление мастеру">
+</p>
+<p align="center">
+  <sub>Отмена записи клиентом и уведомление мастера о новом бронировании</sub>
+</p>
